@@ -54,11 +54,14 @@ Object-Oriented Analysis focuses on understanding the problem, identifying the u
 3. The system shall require the visitor's full name, reason, address, school, and digital signature.
 4. The system shall automatically record the date and time in.
 5. The system shall save check-in records to `liblog_data.csv`.
-6. The system shall allow a visitor to check out by name.
-7. The system shall automatically record time out and calculate duration.
-8. The system shall update the CSV file after check-out.
-9. The system shall display current occupancy and maximum capacity.
-10. The system shall generate a daily report as `report_YYYY-MM-DD.txt`.
+6. The system shall provide a cancel option during check-in.
+7. The system shall prevent a visitor from being checked in twice while still inside.
+8. The system shall allow a visitor to check out by selecting from a numbered list of active visitor names.
+9. The system shall provide a cancel option during check-out.
+10. The system shall automatically record time out and calculate duration.
+11. The system shall update the CSV file after check-out.
+12. The system shall display current occupancy and maximum capacity.
+13. The system shall generate a daily report as `report_YYYY-MM-DD.txt`.
 
 ### Non-Functional Requirements
 
@@ -99,7 +102,7 @@ Each visitor record is stored as a dictionary and saved as one row in the CSV fi
 
 ### Process Design
 
-When the program starts, it loads visitor records from `liblog_data.csv`. The main menu is then displayed. The user chooses an option, and the system calls the appropriate function. New check-in records are appended to the CSV file. Check-out records update the existing visitor data and rewrite the CSV file. Reports are generated from the current day's records.
+When the program starts, it loads visitor records from `liblog_data.csv`. The main menu is then displayed. The user chooses an option, and the system calls the appropriate function. During check-in, the user may enter `0` at any prompt to cancel before the visitor record is saved. New check-in records are appended to the CSV file only after all required fields are completed. Before saving a new check-in, the system checks if the same visitor name is already active for the day to avoid doubled active records. During check-out, the system displays a numbered list of visitor names currently inside and the user selects the visitor to check out or enters `0` to cancel. Check-out records update the existing visitor data and rewrite the CSV file. Reports are generated from the current day's records.
 
 ## UML Diagrams
 
@@ -140,7 +143,14 @@ classDiagram
         +check_out()
         +view_occupancy()
         +get_current_occupancy()
+        +get_active_visitors()
+        +has_active_visitor(name)
+        +display_active_visitors(active_visitors)
+        +select_active_visitor(active_visitors)
+        +complete_check_out(visitor)
         +input_required(label)
+        +input_check_in_field(label)
+        +cancel_check_in_if_needed(value)
         +get_visitors()
     }
 
@@ -189,7 +199,7 @@ sequenceDiagram
     Staff->>Main: Select option 1
     Main->>LibLogFunctions: check_in()
     LibLogFunctions->>LibLogFunctions: Check current occupancy
-    LibLogFunctions->>Staff: Ask visitor details
+    LibLogFunctions->>Staff: Ask visitor details or 0 to cancel
     Staff->>LibLogFunctions: Enter visitor information
     LibLogFunctions->>LibLogFunctions: Create visitor record with date and time_in
     LibLogFunctions->>CSVHandler: append_record(visitor)
@@ -208,9 +218,9 @@ sequenceDiagram
 
     Staff->>Main: Select option 2
     Main->>LibLogFunctions: check_out()
-    LibLogFunctions->>Staff: Ask visitor name
-    Staff->>LibLogFunctions: Enter visitor name
-    LibLogFunctions->>LibLogFunctions: Search active visitor record
+    LibLogFunctions->>Staff: Display active visitor name list with cancel option
+    Staff->>LibLogFunctions: Select visitor number or 0 to cancel
+    LibLogFunctions->>LibLogFunctions: Get selected visitor record
     LibLogFunctions->>LibLogFunctions: Record time_out and calculate duration
     LibLogFunctions->>CSVHandler: save_all(visitors)
     CSVHandler->>CSVHandler: Update liblog_data.csv
@@ -261,9 +271,16 @@ flowchart TD
 | `get_today()` | Returns the current date. |
 | `is_today(visitor)` | Checks if a visitor record belongs to the current day. |
 | `get_current_occupancy()` | Counts visitors who checked in today and have not checked out. |
+| `get_active_visitors()` | Returns today's visitors who are still inside the library. |
+| `has_active_visitor(name)` | Checks if a visitor name is already checked in and prevents doubled active records. |
 | `input_required(label)` | Keeps asking for input until the user enters a non-empty value. |
+| `input_check_in_field(label)` | Gets a required check-in field and allows `0` to cancel the process. |
+| `cancel_check_in_if_needed(value)` | Stops the check-in process when the user enters `0`. |
 | `check_in()` | Records a visitor's information, timestamp, and saves the record to CSV. |
-| `check_out()` | Searches for an active visitor, records time out, calculates duration, and updates CSV. |
+| `display_active_visitors(active_visitors)` | Displays a numbered list of visitor names currently inside and a cancel option. |
+| `select_active_visitor(active_visitors)` | Lets the user choose the visitor to check out by number or cancel by entering `0`. |
+| `complete_check_out(visitor)` | Records time out, calculates duration, and updates the CSV file. |
+| `check_out()` | Displays active visitors, lets the user select one, and completes the check-out process. |
 | `view_occupancy()` | Displays current occupancy, capacity, percentage full, and warning status. |
 | `get_visitors()` | Returns the list of visitor records loaded in memory. |
 | `get_max_capacity()` | Returns the maximum capacity of the library. |
@@ -308,8 +325,8 @@ python Main.py
 5. Exit
 ```
 
-5. During check-in, enter the visitor's full name, reason of visit, address, school, and digital signature.
-6. During check-out, enter the visitor's name.
+5. During check-in, enter the visitor's full name, reason of visit, address, school, and digital signature, or enter `0` at any prompt to cancel.
+6. During check-out, select the visitor number from the displayed active visitor name list, or enter `0` to cancel.
 7. To view current occupancy, choose option 3.
 8. To create the daily report, choose option 4.
 
@@ -334,25 +351,48 @@ After implementation, the system was able to perform the required features succe
 
 ### Check-In Result
 
-The system accepts visitor information and saves it to `liblog_data.csv`.
+The system accepts visitor information and saves it to `liblog_data.csv`. The user can enter `0` at any check-in prompt to cancel without saving a partial record.
 
 Example output:
 
 ```text
+===== CHECK-IN =====
+Enter 0 anytime to cancel check-in.
+
 Check-in successful!
 Date: 2026-05-27
 Time In: 2026-05-27 08:15:30
 Current Occupancy: 1
 ```
 
+Example cancelled check-in:
+
+```text
+===== CHECK-IN =====
+Enter 0 anytime to cancel check-in.
+Full Name: 0
+
+Check-in cancelled.
+```
+
 ### Check-Out Result
 
-The system searches for the visitor, records the departure time, calculates duration, and updates the CSV file.
+The system displays the names of visitors currently inside, allows the user to select a visitor by number or enter `0` to cancel, records the departure time, calculates duration, and updates the CSV file.
 
 Example output:
 
 ```text
+Visitors Currently Inside:
+--------------------------
+1. Juan Dela Cruz
+2. Maria Santos
+0. Cancel check-out
+--------------------------
+
+Enter your choice: 1
+
 Check-out successful!
+Name: Juan Dela Cruz
 Time Out: 2026-05-27 09:05:12
 Duration: 0:49:42
 Current Occupancy: 0
