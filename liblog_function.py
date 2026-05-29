@@ -1,149 +1,120 @@
-from datetime import datetime
-import os
-from csv_handler import load_data, save_all, append_record
+import csv
+from abc import ABC, abstractmethod
 
-MAX_CAPACITY = 20
-DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+FILE_NAME = "liblog_data.csv"
 
-visitors = load_data()
-
-
-def clear_screen():
-    os.system("cls" if os.name == "nt" else "clear")
-
-
-def get_today():
-    return datetime.now().strftime("%Y-%m-%d")
-
-
-def is_today(visitor):
-    return visitor.get("date") == get_today()
+FIELDNAMES = [
+    "date",
+    "name",
+    "reason",
+    "address",
+    "school",
+    "signature",
+    "time_in",
+    "time_out",
+    "duration",
+]
 
 
-def get_current_occupancy():
-    return len([
-        visitor
-        for visitor in visitors
-        if is_today(visitor) and visitor.get("time_out", "") == ""
-    ])
+class StorageBackend(ABC):
+    """Abstraction for saving and loading visitor rows."""
+
+    @abstractmethod
+    def load_data(self):
+        pass
+
+    @abstractmethod
+    def save_all(self, visitors):
+        pass
+
+    @abstractmethod
+    def append_record(self, visitor):
+        pass
 
 
-def input_required(label):
-    while True:
-        value = input(label).strip()
+class CSVStorage(StorageBackend):
+    """Concrete storage class that persists records in a CSV file."""
 
-        if value:
-            return value
+    def __init__(self, file_name=FILE_NAME, fieldnames=None):
+        self._file_name = file_name
+        self._fieldnames = fieldnames or FIELDNAMES
 
-        print("This field is required. Please try again.")
+    def _get_date_from_time_in(self, row):
+        time_in = row.get("time_in", "")
+        return time_in[:10] if len(time_in) >= 10 else ""
 
+    def _normalize_row(self, row):
+        if hasattr(row, "to_dict"):
+            row = row.to_dict()
 
-# =========================
-# FEATURE 1: CHECK IN
-# =========================
-def check_in():
+        normalized = {}
 
-    clear_screen()
-    print("===== CHECK-IN =====")
+        for field in self._fieldnames:
+            normalized[field] = row.get(field, "")
 
-    if get_current_occupancy() >= MAX_CAPACITY:
-        print("\nLibrary is already at full capacity!")
-        return
+        if not normalized["date"]:
+            normalized["date"] = self._get_date_from_time_in(normalized)
 
-    name = input_required("Full Name: ")
-    reason = input_required("Reason of Visit: ")
-    address = input_required("Exact Location / Address: ")
-    school = input_required("School: ")
-    signature = input_required("Signature (typed name): ")
+        return normalized
 
-    now = datetime.now()
-    visit_date = now.strftime("%Y-%m-%d")
-    time_in = now.strftime(DATETIME_FORMAT)
+    def create_file_if_missing(self):
+        try:
+            with open(self._file_name, "x", newline="", encoding="utf-8") as file:
+                writer = csv.DictWriter(file, fieldnames=self._fieldnames)
+                writer.writeheader()
+        except FileExistsError:
+            pass
 
-    visitor = {
-        "date": visit_date,
-        "name": name,
-        "reason": reason,
-        "address": address,
-        "school": school,
-        "signature": signature,
-        "time_in": time_in,
-        "time_out": "",
-        "duration": "",
-    }
+    def load_data(self):
+        visitors = []
+        self.create_file_if_missing()
 
-    visitors.append(visitor)
-    append_record(visitor)
+        with open(self._file_name, "r", newline="", encoding="utf-8") as file:
+            reader = csv.DictReader(file)
+            needs_migration = reader.fieldnames != self._fieldnames
 
-    print("\nCheck-in successful!")
-    print("Date:", visit_date)
-    print("Time In:", time_in)
-    print("Current Occupancy:", get_current_occupancy())
+            for row in reader:
+                visitors.append(self._normalize_row(row))
 
+        if needs_migration:
+            self.save_all(visitors)
 
-# =========================
-# FEATURE 2: CHECK OUT
-# =========================
-def check_out():
+        return visitors
 
-    clear_screen()
-    print("===== CHECK-OUT =====")
+    def save_all(self, visitors):
+        with open(self._file_name, "w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=self._fieldnames)
+            writer.writeheader()
 
-    name = input_required("Enter Name: ")
+            for visitor in visitors:
+                writer.writerow(self._normalize_row(visitor))
 
-    for visitor in visitors:
-        if (
-            visitor["name"].lower() == name.lower()
-            and is_today(visitor)
-            and visitor.get("time_out", "") == ""
-        ):
-            time_out = datetime.now()
-            time_in = datetime.strptime(visitor["time_in"], DATETIME_FORMAT)
-            duration = time_out - time_in
+    def append_record(self, visitor):
+        self.create_file_if_missing()
 
-            visitor["time_out"] = time_out.strftime(DATETIME_FORMAT)
-            visitor["duration"] = str(duration)
-
-            save_all(visitors)
-
-            print("\nCheck-out successful!")
-            print("Time Out:", visitor["time_out"])
-            print("Duration:", duration)
-            print("Current Occupancy:", get_current_occupancy())
-            return
-
-    print("Visitor not found or already checked out today!")
+        with open(self._file_name, "a", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=self._fieldnames)
+            writer.writerow(self._normalize_row(visitor))
 
 
-# =========================
-# FEATURE 3: LIVE OCCUPANCY
-# =========================
-def view_occupancy():
-
-    clear_screen()
-
-    inside = get_current_occupancy()
-    percent = (inside / MAX_CAPACITY) * 100
-
-    print("===== OCCUPANCY =====")
-    print("Current Occupancy:", inside)
-    print("Maximum Capacity:", MAX_CAPACITY)
-    print(f"Percentage Full: {percent:.2f}%")
-
-    if inside >= MAX_CAPACITY:
-        print("WARNING: Library is FULL!")
-    elif inside >= MAX_CAPACITY * 0.8:
-        print("WARNING: Library is NEAR CAPACITY!")
-    else:
-        print("Library occupancy is normal.")
+_default_storage = CSVStorage()
 
 
-# =========================
-# HELPER FUNCTIONS
-# =========================
-def get_visitors():
-    return visitors
+def create_file_if_missing():
+    """Create the CSV file with headers if it does not exist yet."""
+    _default_storage.create_file_if_missing()
 
 
-def get_max_capacity():
-    return MAX_CAPACITY
+def load_data():
+    """Load all visitor records from CSV."""
+    return _default_storage.load_data()
+
+
+def save_all(visitors):
+    """Rewrite the CSV file after a record is updated."""
+    _default_storage.save_all(visitors)
+
+
+def append_record(visitor):
+    """Append a single visitor record to the CSV file."""
+    _default_storage.append_record(visitor)
