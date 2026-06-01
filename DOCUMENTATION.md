@@ -1,0 +1,509 @@
+# LibLog Console System Documentation
+
+## Introduction
+
+LibLog Console System is a menu-driven Python program designed to record and monitor library visitors. The system allows a user to check in a visitor, check out a visitor, view the current library occupancy, and generate a daily report.
+
+The program uses object-oriented programming, modular programming, and file handling. Visitor records are stored in a CSV file named `liblog_data.csv`, which allows the system to keep data even after the program is closed. Daily reports are saved as text files inside the `reports` folder.
+
+## Objectives
+
+The main objectives of the system are:
+
+1. To record visitor check-in information.
+2. To record visitor check-out time and calculate visit duration.
+3. To monitor live library occupancy.
+4. To warn the user when the library is near or at full capacity.
+5. To save all visitor records using CSV file handling.
+6. To generate a daily report based on the saved records.
+7. To demonstrate the four pillars of object-oriented programming: abstraction, encapsulation, inheritance, and polymorphism.
+
+## Object-Oriented Analysis
+
+Object-Oriented Analysis focuses on understanding the problem, identifying the users of the system, and identifying the important objects and actions.
+
+### Actors
+
+| Actor | Description |
+| --- | --- |
+| Librarian or Staff | Uses the system to record visitor check-ins, check-outs, occupancy, and reports. |
+| Visitor | Provides personal visit information during check-in and checks out when leaving. |
+
+### Main Use Cases
+
+| Use Case | Description |
+| --- | --- |
+| Check In Visitor | Records visitor information and arrival time. |
+| Check Out Visitor | Records departure time and calculates visit duration. |
+| View Occupancy | Displays current occupancy, capacity, percentage full, and warning message. |
+| Generate Daily Report | Creates a text report for the current day. |
+| Save and Load Data | Stores records in CSV and restores records when the program starts. |
+
+### Object Candidates
+
+| Object | Important Data | Responsibility |
+| --- | --- | --- |
+| Visitor Record | Date, name, reason, address, school, signature, time in, time out, duration | Stores one visitor transaction. |
+| Library Log System | Visitor list, maximum capacity | Manages check-in, check-out, and occupancy. |
+| CSV Storage | File name, field names | Saves and loads visitor records. |
+| Report Generator | Daily records, peak hour, average duration | Creates daily report summary. |
+| Person | Name and address | Provides shared person information that `VisitorRecord` inherits. |
+
+### Functional Requirements
+
+1. The system shall display a main menu.
+2. The system shall allow a visitor to check in.
+3. The system shall require the visitor's full name, reason, address, school, and digital signature.
+4. The system shall automatically record the date and time in.
+5. The system shall save check-in records to `liblog_data.csv`.
+6. The system shall provide a cancel option during check-in.
+7. The system shall prevent a visitor from being checked in twice while still inside.
+8. The system shall allow a visitor to check out by selecting from a numbered list of active visitor names.
+9. The system shall provide a cancel option during check-out.
+10. The system shall automatically record time out and calculate duration.
+11. The system shall update the CSV file after check-out.
+12. The system shall display current occupancy and maximum capacity.
+13. The system shall generate a daily report as `report_YYYY-MM-DD.txt`.
+
+### Non-Functional Requirements
+
+1. The system should be simple and easy to use through a console menu.
+2. The system should keep data even after the program closes.
+3. The system should separate code into modules for easier maintenance.
+4. The system should prevent empty required inputs.
+5. The system should prevent check-in when maximum capacity is reached.
+
+## Object-Oriented Design
+
+Object-Oriented Design focuses on how the system is organized and how each part works together. The current program is implemented using Python classes and modules so the four OOP pillars are visible in the source code.
+
+### Four OOP Pillars in LibLog Console
+
+| Pillar | Implementation in the System |
+| --- | --- |
+| Abstraction | `StorageBackend` and `Report` are abstract base classes that define required behavior without exposing storage or report details. |
+| Encapsulation | `VisitorRecord` keeps visitor details in private attributes and exposes controlled access through properties and methods. |
+| Inheritance | `VisitorRecord` inherits common person information from the `Person` class. `CSVStorage` inherits from `StorageBackend`, and `DailyReport` inherits from `Report`. |
+| Polymorphism | Code can work through abstract parent types such as `StorageBackend` and `Report` while concrete classes provide their own `load_data`, `save_all`, `append_record`, and `build` implementations. |
+
+### Module Design
+
+| Module | Purpose |
+| --- | --- |
+| `Main.py` | Displays the menu and calls the selected system function. |
+| `visitor_record.py` | Contains `Person` and `VisitorRecord`, the classes used to represent visitor data. |
+| `liblog_function.py` | Contains `LibraryLogSystem` and the console functions for check-in, check-out, and occupancy. |
+| `csv_handler.py` | Contains `StorageBackend` and `CSVStorage` for CSV file creation, loading, saving, and appending records. |
+| `report_generator.py` | Contains `Report`, `DailyReport`, and report-saving functions. |
+
+### Data Design
+
+Each visitor record is stored as a `VisitorRecord` object while the program is running and saved as one row in the CSV file.
+
+| Field | Description |
+| --- | --- |
+| `date` | Date of visit. |
+| `name` | Full name of the visitor. |
+| `reason` | Reason for visiting the library. |
+| `address` | Exact location or address of the visitor. |
+| `school` | Name of the visitor's school. |
+| `signature` | Typed name used as digital signature. |
+| `time_in` | Automatic check-in timestamp. |
+| `time_out` | Automatic check-out timestamp. |
+| `duration` | Total time spent inside the library. |
+
+### Process Design
+
+When the program starts, it loads visitor records from `liblog_data.csv`. The main menu is then displayed. The user chooses an option, and the system calls the appropriate function. During check-in, the user may enter `0` at any prompt to cancel before the visitor record is saved. New check-in records are appended to the CSV file only after all required fields are completed. Before saving a new check-in, the system checks if the same visitor name is already active for the day to avoid doubled active records. During check-out, the system displays a numbered list of visitor names currently inside and the user selects the visitor to check out or enters `0` to cancel. Check-out records update the existing visitor data and rewrite the CSV file. Reports are generated from the current day's records.
+
+## UML Diagrams
+
+### Use Case Diagram
+
+```mermaid
+flowchart LR
+    Staff["Librarian or Staff"]
+    Visitor["Visitor"]
+
+    CheckIn["Check In Visitor"]
+    CheckOut["Check Out Visitor"]
+    Occupancy["View Occupancy"]
+    Report["Generate Daily Report"]
+    Storage["Save and Load CSV Data"]
+
+    Staff --> CheckIn
+    Staff --> CheckOut
+    Staff --> Occupancy
+    Staff --> Report
+    CheckIn --> Storage
+    CheckOut --> Storage
+    Report --> Storage
+    Visitor --> CheckIn
+    Visitor --> CheckOut
+```
+
+### Class or Module Diagram
+
+```mermaid
+classDiagram
+    class Main {
+        +main()
+    }
+
+    class Person {
+        -name
+        -address
+        +matches_name(name)
+    }
+
+    class VisitorRecord {
+        -date
+        -reason
+        -school
+        -signature
+        -time_in
+        -time_out
+        -duration
+        +create(...)
+        +from_dict(row)
+        +to_dict()
+        +is_for_date(date)
+        +is_active_on(date)
+        +check_out(time_out)
+    }
+
+    class LibraryLogSystem {
+        -storage
+        -max_capacity
+        -visitors
+        +get_current_occupancy()
+        +get_active_visitors()
+        +has_active_visitor(name)
+        +check_in_visitor(...)
+        +check_out_visitor(visitor)
+        +get_visitors()
+    }
+
+    class StorageBackend {
+        <<abstract>>
+        +load_data()
+        +save_all(visitors)
+        +append_record(visitor)
+    }
+
+    class CSVStorage {
+        -file_name
+        -fieldnames
+        +load_data()
+        +save_all(visitors)
+        +append_record(visitor)
+        +create_file_if_missing()
+    }
+
+    class Report {
+        <<abstract>>
+        +build()
+    }
+
+    class DailyReport {
+        -visitors
+        -report_date
+        +get_daily_visitors()
+        +build()
+    }
+
+    class ConsoleFunctions {
+        +check_in()
+        +check_out()
+        +view_occupancy()
+    }
+
+    class ReportFunctions {
+        +generate_report()
+        +get_peak_hour(visitors)
+        +format_peak_hour(hour)
+        +parse_datetime(value)
+    }
+
+    Person <|-- VisitorRecord
+    StorageBackend <|-- CSVStorage
+    Report <|-- DailyReport
+    Main --> ConsoleFunctions
+    Main --> ReportFunctions
+    ConsoleFunctions --> LibraryLogSystem
+    LibraryLogSystem --> CSVStorage
+    LibraryLogSystem --> VisitorRecord
+    ReportFunctions --> DailyReport
+    DailyReport --> VisitorRecord
+```
+
+### Check-In Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant Staff
+    participant Main
+    participant ConsoleFunctions
+    participant LibraryLogSystem
+    participant CSVStorage
+
+    Staff->>Main: Select option 1
+    Main->>ConsoleFunctions: check_in()
+    ConsoleFunctions->>LibraryLogSystem: get_current_occupancy()
+    ConsoleFunctions->>Staff: Ask visitor details or 0 to cancel
+    Staff->>ConsoleFunctions: Enter visitor information
+    ConsoleFunctions->>LibraryLogSystem: check_in_visitor(...)
+    LibraryLogSystem->>LibraryLogSystem: Create VisitorRecord
+    LibraryLogSystem->>CSVStorage: append_record(visitor)
+    CSVStorage->>CSVStorage: Save record to liblog_data.csv
+    ConsoleFunctions->>Staff: Display successful check-in
+```
+
+### Check-Out Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant Staff
+    participant Main
+    participant ConsoleFunctions
+    participant LibraryLogSystem
+    participant CSVStorage
+
+    Staff->>Main: Select option 2
+    Main->>ConsoleFunctions: check_out()
+    ConsoleFunctions->>LibraryLogSystem: get_active_visitors()
+    ConsoleFunctions->>Staff: Display active visitor name list with cancel option
+    Staff->>ConsoleFunctions: Select visitor number or 0 to cancel
+    ConsoleFunctions->>LibraryLogSystem: check_out_visitor(visitor)
+    LibraryLogSystem->>LibraryLogSystem: Record time_out and calculate duration
+    LibraryLogSystem->>CSVStorage: save_all(visitors)
+    CSVStorage->>CSVStorage: Update liblog_data.csv
+    ConsoleFunctions->>Staff: Display successful check-out and duration
+```
+
+### System Flowchart
+
+```mermaid
+flowchart TD
+    Start["Start Program"]
+    Load["Load records from liblog_data.csv"]
+    Menu["Display Main Menu"]
+    Choice{"User Choice"}
+    CheckIn["Check In Visitor"]
+    CheckOut["Check Out Visitor"]
+    Occupancy["View Occupancy"]
+    Report["Generate Report"]
+    Exit["Exit Program"]
+
+    Start --> Load
+    Load --> Menu
+    Menu --> Choice
+    Choice -->|"1"| CheckIn
+    Choice -->|"2"| CheckOut
+    Choice -->|"3"| Occupancy
+    Choice -->|"4"| Report
+    Choice -->|"5"| Exit
+    CheckIn --> Menu
+    CheckOut --> Menu
+    Occupancy --> Menu
+    Report --> Menu
+```
+
+## Program Methods and Functions
+
+### `Main.py`
+
+| Function | Description |
+| --- | --- |
+| `main()` | Displays the menu, gets the user's choice, and calls the selected feature. |
+
+### `visitor_record.py`
+
+| Class or Method | Description |
+| --- | --- |
+| `Person` | Base class that stores common person details such as name and address. |
+| `VisitorRecord` | Encapsulates one visitor transaction with date, reason, school, signature, time in, time out, and duration. |
+| `VisitorRecord.create()` | Creates a new check-in record with the current date and time. |
+| `VisitorRecord.from_dict(row)` | Converts CSV row data into a `VisitorRecord` object. |
+| `VisitorRecord.to_dict()` | Converts a `VisitorRecord` object back into a CSV-ready dictionary. |
+| `VisitorRecord.check_out()` | Records time out and calculates visit duration. |
+
+### `liblog_function.py`
+
+| Class or Function | Description |
+| --- | --- |
+| `LibraryLogSystem` | Main class that manages visitor records, occupancy, check-in, and check-out. |
+| `LibraryLogSystem.check_in_visitor()` | Creates a visitor record and saves it through the storage object. |
+| `LibraryLogSystem.check_out_visitor(visitor)` | Updates a selected visitor record and saves the full visitor list. |
+| `clear_screen()` | Clears the console screen. |
+| `get_today()` | Returns the current date. |
+| `is_today(visitor)` | Checks if a visitor record belongs to the current day. |
+| `get_current_occupancy()` | Counts visitors who checked in today and have not checked out. |
+| `get_active_visitors()` | Returns today's visitors who are still inside the library. |
+| `has_active_visitor(name)` | Checks if a visitor name is already checked in and prevents doubled active records. |
+| `input_required(label)` | Keeps asking for input until the user enters a non-empty value. |
+| `input_check_in_field(label)` | Gets a required check-in field and allows `0` to cancel the process. |
+| `cancel_check_in_if_needed(value)` | Stops the check-in process when the user enters `0`. |
+| `check_in()` | Records a visitor's information, timestamp, and saves the record to CSV. |
+| `display_active_visitors(active_visitors)` | Displays a numbered list of visitor names currently inside and a cancel option. |
+| `select_active_visitor(active_visitors)` | Lets the user choose the visitor to check out by number or cancel by entering `0`. |
+| `complete_check_out(visitor)` | Records time out, calculates duration, and updates the CSV file. |
+| `check_out()` | Displays active visitors, lets the user select one, and completes the check-out process. |
+| `view_occupancy()` | Displays current occupancy, capacity, percentage full, and warning status. |
+| `get_visitors()` | Returns the list of visitor records loaded in memory. |
+| `get_max_capacity()` | Returns the maximum capacity of the library. |
+
+### `csv_handler.py`
+
+| Class or Function | Description |
+| --- | --- |
+| `StorageBackend` | Abstract base class for storage behavior. |
+| `CSVStorage` | Concrete storage class that saves and loads records from `liblog_data.csv`. |
+| `create_file_if_missing()` | Creates `liblog_data.csv` with headers if it does not exist. |
+| `load_data()` | Loads all records from the CSV file when the program starts. |
+| `save_all(visitors)` | Rewrites the CSV file after a record is updated. |
+| `append_record(visitor)` | Adds one new visitor record to the CSV file. |
+| `_normalize_row(row)` | Makes sure each CSV row has all required fields. |
+
+### `report_generator.py`
+
+| Class or Function | Description |
+| --- | --- |
+| `Report` | Abstract base class for report generation. |
+| `DailyReport` | Concrete report class that builds the daily visitor report. |
+| `parse_datetime(value)` | Converts a timestamp string into a datetime object. |
+| `is_today(visitor, today)` | Checks if a visitor record is for the current report date. |
+| `format_peak_hour(hour)` | Converts the peak hour into a readable time range. |
+| `get_peak_hour(visitors)` | Finds the hour with the highest number of check-ins. |
+| `generate_report()` | Creates and saves the daily report. |
+
+## Instructions for Running the Program
+
+1. Open the project folder.
+2. Make sure Python is installed on the computer.
+3. Run the program using this command:
+
+```powershell
+python Main.py
+```
+
+4. Choose from the menu:
+
+```text
+1. Check In Visitor
+2. Check Out Visitor
+3. View Occupancy
+4. Generate Report
+5. Exit
+```
+
+5. During check-in, enter the visitor's full name, reason of visit, address, school, and digital signature, or enter `0` at any prompt to cancel.
+6. During check-out, select the visitor number from the displayed active visitor name list, or enter `0` to cancel.
+7. To view current occupancy, choose option 3.
+8. To create the daily report, choose option 4.
+
+## Methodology
+
+The system was developed using Python, object-oriented programming, and a modular programming approach. The development process followed these steps:
+
+1. Identify the main requirements of a library visitor log system.
+2. Design a menu-driven console interface.
+3. Create separate modules for menu control, visitor records, system functions, CSV handling, and report generation.
+4. Use `VisitorRecord` objects to represent visitor records while the program is running.
+5. Use a list to store visitor records while the program is running.
+6. Use CSV file handling to save records permanently.
+7. Add abstract base classes for storage and reports.
+8. Use inheritance through `Person`, `VisitorRecord`, `StorageBackend`, `CSVStorage`, `Report`, and `DailyReport`.
+9. Use the `datetime` module to automatically record time in and time out.
+10. Calculate occupancy by counting today's visitors without a time out.
+11. Generate a daily report from the stored visitor data.
+12. Test the system by performing check-in, check-out, occupancy display, and report generation.
+
+## Results
+
+After implementation, the system was able to perform the required features successfully.
+
+### Check-In Result
+
+The system accepts visitor information and saves it to `liblog_data.csv`. The user can enter `0` at any check-in prompt to cancel without saving a partial record.
+
+Example output:
+
+```text
+===== CHECK-IN =====
+Enter 0 anytime to cancel check-in.
+
+Check-in successful!
+Date: 2026-05-27
+Time In: 2026-05-27 08:15:30
+Current Occupancy: 1
+```
+
+Example cancelled check-in:
+
+```text
+===== CHECK-IN =====
+Enter 0 anytime to cancel check-in.
+Full Name: 0
+
+Check-in cancelled.
+```
+
+### Check-Out Result
+
+The system displays the names of visitors currently inside, allows the user to select a visitor by number or enter `0` to cancel, records the departure time, calculates duration, and updates the CSV file.
+
+Example output:
+
+```text
+Visitors Currently Inside:
+--------------------------
+1. Juan Dela Cruz
+2. Maria Santos
+0. Cancel check-out
+--------------------------
+
+Enter your choice: 1
+
+Check-out successful!
+Name: Juan Dela Cruz
+Time Out: 2026-05-27 09:05:12
+Duration: 0:49:42
+Current Occupancy: 0
+```
+
+### Occupancy Result
+
+The system displays the current number of visitors inside the library.
+
+Example output:
+
+```text
+Current Occupancy: 16
+Maximum Capacity: 20
+Percentage Full: 80.00%
+WARNING: Library is NEAR CAPACITY!
+```
+
+### Daily Report Result
+
+The system generates a daily report file inside the `reports` folder.
+
+Example report:
+
+```text
+===== LIBLOG DAILY REPORT =====
+Date: 2026-05-27
+
+Total Check-ins: 5
+Peak Hour: 08:00 - 08:59
+Average Visit Duration: 45.20 minutes
+Visitors Still Inside: 2
+Completed Visits: 3
+```
+
+## Conclusion
+
+The LibLog Console System successfully records visitor check-ins and check-outs, monitors library occupancy, saves data using CSV file handling, generates a daily report, and demonstrates the four pillars of object-oriented programming. The use of classes and modules makes the program easier to understand, maintain, and improve in the future.
+
+Possible future improvements include adding visitor ID numbers, search and edit features, login security, database storage, and a graphical user interface.
