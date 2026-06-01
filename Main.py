@@ -1,4 +1,4 @@
-from liblog_function import check_in, check_out, view_four_pillars, view_occupancy
+from liblog_function import check_in, check_out, view_occupancy
 from report_generator import generate_report
 from liblog_function import clear_screen
 
@@ -16,8 +16,7 @@ def main():
         print("2. Check Out Visitor")
         print("3. View Occupancy")
         print("4. Generate Report")
-        print("5. View Four OOP Pillars")
-        print("6. Exit")
+        print("5. Exit")
         print("======================")
 
         choice = input("Enter choice: ")
@@ -35,9 +34,6 @@ def main():
             generate_report()
 
         elif choice == "5":
-            view_four_pillars()
-
-        elif choice == "6":
             print("Exiting system...")
             break
 
